@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACTIVAI - Rehabilitation Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        clinicalBlue: '#1a73e8',
+                        clinicalGreen: '#34a853',
+                        clinicalWarning: '#fbbc04',
+                        clinicalDanger: '#ea4335'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 min-h-screen">
+
+    <nav class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🦾</span>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">ACTIVAI</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Kawatek Rehabilitation Platform</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Patient File</p>
+                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-300" id="patient-id-display">Loading...</p>
+                </div>
+                <button onclick="simulateLiveSession()" class="bg-clinicalBlue hover:bg-blue-600 text-white text-xs font-semibold px-3 py-2 rounded-lg transition shadow-sm">
+                    ⚡ Live Simulation
+                </button>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-700 transition">
+                    <span id="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Completed Sessions</p>
+                <p class="text-3xl font-bold mt-2 text-clinicalBlue" id="stat-total-sessions">0</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Average Exercise Accuracy</p>
+                <p class="text-3xl font-bold mt-2 text-clinicalGreen" id="stat-avg-accuracy">0%</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Current Overall Progress</p>
+                <p class="text-3xl font-bold mt-2 text-slate-800 dark:text-white" id="stat-current-progress">0%</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Latest EMG Quality Score</p>
+                <p class="text-3xl font-bold mt-2 text-clinicalWarning" id="stat-emg-score">0.00</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+                <div>
+                    <h3 class="font-bold text-slate-800 dark:text-white text-base">Neuromuscular Recovery Performance over Time</h3>
+                    <p class="text-xs text-slate-500">Longitudinal analytics tracking clinical execution trends and muscular fatigue indexes.</p>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="progressLineChart"></canvas>
+                </div>
+                <div class="relative h-48">
+                    <canvas id="fatigueLineChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-800 dark:text-white text-base">Exercise Breakdown Metrics</h3>
+                    <p class="text-xs text-slate-500 mb-4">Granular performance overview sorted by cognitive execution intent types.</p>
+                </div>
+                <div class="relative h-72 flex-1">
+                    <canvas id="exerciseBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-850 p-6 rounded-xl border border-blue-100 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="text-xl">✨</span>
+                <h3 class="font-bold text-slate-800 dark:text-white text-base">ACTIVAI Clinical Recommendation Engine</h3>
+            </div>
+            <div id="ai-recommendations-list" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="mb-4">
+                <h3 class="font-bold text-slate-800 dark:text-white text-base">Therapeutic Session Records Log</h3>
+                <p class="text-xs text-slate-500">Historical summary files of completed prosthetic integration modules. Click line items to drill down.</p>
+            </div>
+            <div id="session-history-container" class="space-y-3 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Integrated Mock Patient Rehabilitation Dataset
+        let patientData = {
+            "patient_id": "RYO-2027-001",
+            "sessions": [
+                {
+                    "session_id": 1,
+                    "date": "2027-07-10",
+                    "duration_minutes": 30,
+                    "emg_quality_score": 0.85,
+                    "overall_progress_percent": 45,
+                    "exercises": [
+                        { "name": "Power Grip Training", "repetitions": 15, "accuracy_percent": 72, "avg_response_time_ms": 340, "fatigue_index": 0.30 },
+                        { "name": "Point Control", "repetitions": 15, "accuracy_percent": 62, "avg_response_time_ms": 450, "fatigue_index": 0.45 },
+                        { "name": "Combined Grip Sequence", "repetitions": 8, "accuracy_percent": 48, "avg_response_time_ms": 650, "fatigue_index": 0.70 }
+                    ]
+                },
+                {
+                    "session_id": 5,
+                    "date": "2027-07-18",
+                    "duration_minutes": 40,
+                    "emg_quality_score": 0.88,
+                    "overall_progress_percent": 58,
+                    "exercises": [
+                        { "name": "Power Grip Training", "repetitions": 20, "accuracy_percent": 81, "avg_response_time_ms": 290, "fatigue_index": 0.25 },
+                        { "name": "Pinch Control", "repetitions": 15, "accuracy_percent": 70, "avg_response_time_ms": 370, "fatigue_index": 0.35 },
+                        { "name": "Point Control", "repetitions": 15, "accuracy_percent": 65, "avg_response_time_ms": 430, "fatigue_index": 0.42 },
+                        { "name": "Combined Grip Sequence", "repetitions": 10, "accuracy_percent": 52, "avg_response_time_ms": 610, "fatigue_index": 0.66 }
+                    ]
+                },
+                {
+                    "session_id": 10,
+                    "date": "2027-07-27",
+                    "duration_minutes": 45,
+                    "emg_quality_score": 0.91,
+                    "overall_progress_percent": 74,
+                    "exercises": [
+                        { "name": "Power Grip Training", "repetitions": 25, "accuracy_percent": 90, "avg_response_time_ms": 230, "fatigue_index": 0.18 },
+                        { "name": "Pinch Control", "repetitions": 20, "accuracy_percent": 82, "avg_response_time_ms": 310, "fatigue_index": 0.28 },
+                        { "name": "Lateral Grip", "repetitions": 18, "accuracy_percent": 76, "avg_response_time_ms": 350, "fatigue_index": 0.32 },
+                        { "name": "Point Control", "repetitions": 16, "accuracy_percent": 67, "avg_response_time_ms": 420, "fatigue_index": 0.40 },
+                        { "name": "Combined Grip Sequence", "repetitions": 10, "accuracy_percent": 55, "avg_response_time_ms": 580, "fatigue_index": 0.62}
+                    ]
+                }
+            ]
+        };
+
+        // Chart References globally scope handled for seamless data mutations
+        let progressChart, fatigueChart, exerciseChart;
+
+        // Init App Lifecycle Execution Entry point
+        window.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+        });
+
+        function initDashboard() {
+            document.getElementById('patient-id-display').innerText = patientData.patient_id;
+            updateSummaryCards();
+            renderCharts();
+            generateAIRecommendations();
+            renderSessionHistory();
+        }
+
+        // Summary Metric Card Computation Engines
+        function updateSummaryCards() {
+            const sessions = patientData.sessions;
+            const totalSessions = sessions.length;
+            
+            let totalAccuracySum = 0;
+            let exerciseCount = 0;
+            
+            sessions.forEach(s => {
+                s.exercises.forEach(e => {
+                    totalAccuracySum += e.accuracy_percent;
+                    exerciseCount++;
+                });
+            });
+
+            const avgAccuracy = exerciseCount > 0 ? Math.round(totalAccuracySum / exerciseCount) : 0;
+            const absoluteLatestSession = sessions[sessions.length - 1];
+
+            document.getElementById('stat-total-sessions').innerText = totalSessions;
+            document.getElementById('stat-avg-accuracy').innerText = `${avgAccuracy}%`;
+            document.getElementById('stat-current-progress').innerText = `${absoluteLatestSession ? absoluteLatestSession.overall_progress_percent : 0}%`;
+            document.getElementById('stat-emg-score').innerText = absoluteLatestSession ? absoluteLatestSession.emg_quality_score.toFixed(2) : "0.00";
+        }
+
+        // Analytical Engine Chart Render Utilities
+        function renderCharts() {
+            const sessions = patientData.sessions;
+            const labels = sessions.map(s => `Session ${s.session_id} (${s.date})`);
+            const progressData = sessions.map(s => s.overall_progress_percent);
+            
+            // Calculate historical average accuracies per whole session block
+            const accuracyData = sessions.map(s => {
+                const totalAcc = s.exercises.reduce((sum, e) => sum + e.accuracy_percent, 0);
+                return Math.round(totalAcc / s.exercises.length);
+            });
+
+            const avgFatigueData = sessions.map(s => {
+                const totalFatigue = s.exercises.reduce((sum, e) => sum + e.fatigue_index, 0);
+                return (totalFatigue / s.exercises.length).toFixed(2);
+            });
+
+            // 1. Progress & Accuracy Composite Line Chart Setup
+            const ctxProgress = document.getElementById('progressLineChart').getContext('2d');
+            if(progressChart) progressChart.destroy();
+            progressChart = new Chart(ctxProgress, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Overall Progress (%)', data: progressData, borderColor: '#1a73e8', backgroundColor: 'rgba(26, 115, 232, 0.1)', tension: 0.2, fill: true },
+                        { label: 'Avg Session Accuracy (%)', data: accuracyData, borderColor: '#34a853', backgroundColor: 'transparent', tension: 0.2, borderDash: [5, 5] }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } } }
+            });
+
+            // 2. Fatigue Longitudinal Progression Chart
+            const ctxFatigue = document.getElementById('fatigueLineChart').getContext('2d');
+            if(fatigueChart) fatigueChart.destroy();
+            fatigueChart = new Chart(ctxFatigue, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{ label: 'Mean Fatigue Index Across Trials', data: avgFatigueData, borderColor: '#ea4335', backgroundColor: 'rgba(234, 67, 53, 0.05)', tension: 0.2, fill: true }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } } }
+            });
+
+            // 3. Isolated Exercise Metric Profiling Chart
+            const exerciseMap = {};
+            sessions.forEach(s => {
+                s.exercises.forEach(e => {
+                    if(!exerciseMap[e.name]) exerciseMap[e.name] = { totalAcc: 0, count: 0 };
+                    exerciseMap[e.name].totalAcc += e.accuracy_percent;
+                    exerciseMap[e.name].count++;
+                });
+            });
+            const exerciseLabels = Object.keys(exerciseMap);
+            const exerciseAverages = exerciseLabels.map(name => Math.round(exerciseMap[name].totalAcc / exerciseMap[name].count));
+
+            const ctxExercise = document.getElementById('exerciseBarChart').getContext('2d');
+            if(exerciseChart) exerciseChart.destroy();
+            exerciseChart = new Chart(ctxExercise, {
+                type: 'bar',
+                data: {
+                    labels: exerciseLabels,
+                    datasets: [{ label: 'Mean Accuracy Score (%)', data: exerciseAverages, backgroundColor: ['#1a73e8', '#34a853', '#fbbc04', '#ea4335', '#a855f7'] }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // Rule-Based AI Engine Logic
+        function generateAIRecommendations() {
+            const sessions = patientData.sessions;
+            const recContainer = document.getElementById('ai-recommendations-list');
+            recContainer.innerHTML = '';
+            
+            if(sessions.length === 0) return;
+            const latestSession = sessions[sessions.length - 1];
+            let recs = [];
+
+            // Rule 1: Repetition Adaptations evaluated dynamically
+            latestSession.exercises.forEach(e => {
+                if(e.accuracy_percent >= 80) {
+                    recs.push({ title: `Advance ${e.name}`, text: `Accuracy reached ${e.accuracy_percent}%. Step up training load by adding 5 additional target task cycles.`, status: 'border-emerald-500 text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/10' });
+                }
+            });
+
+            // Rule 2: Fatigue Thresholding safeguards
+            const excessiveFatigueEx = latestSession.exercises.find(e => e.fatigue_index > 0.60);
+            if(excessiveFatigueEx) {
+                recs.push({ title: "Fatigue Adaptation Protocol", text: `High index spike observed in '${excessiveFatigueEx.name}' (${excessiveFatigueEx.fatigue_index}). Introduce a scheduled 2-minute cooling resting interval.`, status: 'border-amber-500 text-amber-700 bg-amber-50/50 dark:bg-amber-950/10' });
+            }
+
+            // Rule 3: EMG signal degradation checks
+            if(latestSession.emg_quality_score < 0.90) {
+                recs.push({ title: "Myoelectric Signal Refinement", text: `EMG performance registered at ${latestSession.emg_quality_score}. Please confirm electrode placement validation layout matrix before next phase.`, status: 'border-blue-500 text-blue-700 bg-blue-50/50 dark:bg-blue-950/10' });
+            }
+
+            // Default filler fallback safeguards
+            while(recs.length < 3) {
+                recs.push({ title: "Maintain Strategy Strategy", text: "Consistency target metric profiles are tracking effectively within parameters. Keep current timeline configuration metrics.", status: 'border-slate-300 text-slate-700 bg-slate-50' });
+            }
+
+            recs.slice(0, 3).forEach(r => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border ${r.status} flex flex-col justify-between`;
+                card.innerHTML = `<div><h4 class="font-bold text-sm mb-1">${r.title}</h4><p class="text-xs opacity-90 leading-relaxed">${r.text}</p></div>`;
+                recContainer.appendChild(card);
+            });
+        }
+
+        // Expandable Component Dynamic Assembly Engine
+        function renderSessionHistory() {
+            const container = document.getElementById('session-history-container');
+            container.innerHTML = '';
+
+            // Render sequentially descending (latest first)
+            [...patientData.sessions].reverse().forEach(s => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition";
+                
+                item.innerHTML = `
+                    <div onclick="toggleAccordion('detail-${s.session_id}')" class="p-4 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="bg-blue-100 dark:bg-blue-900/40 text-clinicalBlue px-2.5 py-1 rounded-md text-xs font-bold">Session ${s.session_id}</span>
+                            <span class="text-xs font-medium text-slate-500">${s.date}</span>
+                        </div>
+                        <div class="flex items-center gap-6 text-xs font-semibold">
+                            <span>⏱️ ${s.duration_minutes} min</span>
+                            <span class="text-clinicalGreen">🎯 Progress: ${s.overall_progress_percent}%</span>
+                            <span class="text-slate-400">▼</span>
+                        </div>
+                    </div>
+                    <div id="detail-${s.session_id}" class="hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                                        <th class="pb-2 font-medium">Exercise Matrix Routine</th>
+                                        <th class="pb-2 font-medium text-center">Reps</th>
+                                        <th class="pb-2 font-medium text-center">Accuracy Score</th>
+                                        <th class="pb-2 font-medium text-center">Latency Response</th>
+                                        <th class="pb-2 font-medium text-center">Fatigue Coeff.</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    ${s.exercises.map(e => `
+                                        <tr>
+                                            <td class="py-2.5 font-medium text-slate-700 dark:text-slate-300">${e.name}</td>
+                                            <td class="py-2.5 text-center font-semibold">${e.repetitions}</td>
+                                            <td class="py-2.5 text-center font-bold text-clinicalGreen">${e.accuracy_percent}%</td>
+                                            <td class="py-2.5 text-center text-slate-500">${e.avg_response_time_ms}ms</td>
+                                            <td class="py-2.5 text-center font-medium ${e.fatigue_index > 0.6 ? 'text-clinicalDanger' : 'text-slate-600'}">${e.fatigue_index}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function toggleAccordion(id) {
+            const target = document.getElementById(id);
+            if(target.classList.contains('hidden')) {
+                target.classList.remove('hidden');
+            } else {
+                target.classList.add('hidden');
+            }
+        }
+
+        // Live Simulation Data Addition Loop Module
+        function simulateLiveSession() {
+            const baseId = patientData.sessions.length > 0 ? Math.max(...patientData.sessions.map(s => s.session_id)) + 1 : 1;
+            const targetDate = new Date();
+            const dateStr = targetDate.toISOString().split('T')[0];
+
+            const mockLiveSession = {
+                "session_id": baseId,
+                "date": dateStr,
+                "duration_minutes": Math.floor(Math.random() * 20) + 30,
+                "emg_quality_score": parseFloat((Math.random() * 0.1 + 0.88).toFixed(2)),
+                "overall_progress_percent": Math.min(100, (patientData.sessions[patientData.sessions.length-1]?.overall_progress_percent || 40) + Math.floor(Math.random() * 4)),
+                "exercises": [
+                    { "name": "Power Grip Training", "repetitions": 25, "accuracy_percent": Math.floor(Math.random() * 10) + 88, "avg_response_time_ms": 220, "fatigue_index": 0.20 },
+                    { "name": "Pinch Control", "repetitions": 22, "accuracy_percent": Math.floor(Math.random() * 15) + 78, "avg_response_time_ms": 290, "fatigue_index": 0.25 },
+                    { "name": "Lateral Grip", "repetitions": 20, "accuracy_percent": Math.floor(Math.random() * 15) + 72, "avg_response_time_ms": 330, "fatigue_index": 0.30 },
+                    { "name": "Point Control", "repetitions": 18, "accuracy_percent": Math.floor(Math.random() * 15) + 68, "avg_response_time_ms": 390, "fatigue_index": 0.38 },
+                    { "name": "Combined Grip Sequence", "repetitions": 12, "accuracy_percent": Math.floor(Math.random() * 20) + 55, "avg_response_time_ms": 540, "fatigue_index": 0.58 }
+                ]
+            };
+
+            patientData.sessions.push(mockLiveSession);
+            initDashboard();
+        }
+
+        // Dark/Light Theme Switching Handler
+        function toggleDarkMode() {
+            const htmlEl = document.documentElement;
+            const iconEl = document.getElementById('theme-icon');
+            if (htmlEl.classList.contains('dark')) {
+                htmlEl.classList.remove('dark');
+                iconEl.innerText = '🌙';
+            } else {
+                htmlEl.classList.add('dark');
+                iconEl.innerText = '☀️';
+            }
+        }
+    </script>
+</body>
+</html>
